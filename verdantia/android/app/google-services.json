@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "855327470872",
+    "project_id": "verdantia-3752b",
+    "storage_bucket": "verdantia-3752b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:855327470872:android:e9e2df105dee5d07e15a6d",
+        "android_client_info": {
+          "package_name": "com.example.verdantia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKN8WKZhw7f3jYFIWHnyYgEExjwIsFfOI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
