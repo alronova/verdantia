@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import './auth_cubit.dart';
+import 'auth_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class SignupPage extends StatefulWidget {
-  const SignupPage({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<SignupPage> createState() => _SignupPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 OutlineInputBorder border = OutlineInputBorder(
@@ -27,28 +27,27 @@ InputDecoration inputDecor(String hintText) => InputDecoration(
       focusedBorder: border,
     );
 
-class _SignupPageState extends State<SignupPage> {
+class _LoginPageState extends State<LoginPage> {
   // controllers
-  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  // no email controller for log in
   final TextEditingController _passwordController = TextEditingController();
 
   String errorText = "";
 
-  Future<void> _signup({required AuthCubit authCubit}) async {
-    final username = _usernameController.text.trim();
+  Future<void> _login({required AuthCubit authCubit}) async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (username.isEmpty || password.isEmpty || email.isEmpty) {
+    if (email.isEmpty || password.isEmpty) {
       setState(() {
-        errorText = "Username, email and password cannot be empty";
+        errorText = "Email and password cannot be empty";
       });
       return;
     }
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -58,10 +57,10 @@ class _SignupPageState extends State<SignupPage> {
       // context.go('/books');
     } on FirebaseAuthException catch (e) {
       String message;
-      if (e.code == 'weak-password') {
-        message = 'The password provided is too weak.';
-      } else if (e.code == 'email-already-in-use') {
-        message = 'An account already exists with this email.';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for this email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided for this user.';
       } else {
         message = "An unknown error occurred";
       }
@@ -74,7 +73,6 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -84,10 +82,11 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     // final AuthState authState = context.watch<AuthCubit>().state;
     final AuthCubit authCubit = context.read<AuthCubit>();
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text("Sign up"),
+        title: Text("Login"),
       ),
       body: Center(
         child: Padding(
@@ -96,14 +95,6 @@ class _SignupPageState extends State<SignupPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // username text field
-              TextField(
-                controller: _usernameController,
-                decoration: inputDecor("Enter your username here..."),
-              ),
-
-              SizedBox(height: 10),
-
               // email text field
               TextField(
                 controller: _emailController,
@@ -133,7 +124,7 @@ class _SignupPageState extends State<SignupPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => _signup(authCubit: authCubit),
+                  onPressed: () => _login(authCubit: authCubit),
                   style: ElevatedButton.styleFrom(
                     elevation: 0,
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -141,16 +132,16 @@ class _SignupPageState extends State<SignupPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text("Sign up"),
+                  child: Text("Log in"),
                 ),
               ),
 
               SizedBox(height: 5),
 
               GestureDetector(
-                onTap: () => context.go('/login'),
+                onTap: () => context.go('/signup'),
                 child: Text(
-                  "Login instead",
+                  "Sign up instead",
                   textAlign: TextAlign.end,
                 ),
               ),
