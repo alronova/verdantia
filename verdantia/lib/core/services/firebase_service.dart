@@ -60,7 +60,7 @@ Future<Map<String, dynamic>> updatePlants({required Plant plant}) async {
   } catch (e) {
     return {
       "status": "error",
-      "messgage": "An error occurred while trying to add plant: $e"
+      "message": "An error occurred while trying to add plant: $e"
     };
   }
 }
@@ -78,7 +78,7 @@ Future<Map<String, dynamic>> updateCoins({required int newCoinValue}) async {
   } catch (e) {
     return {
       "status": "error",
-      "messgage": "An error occurred while trying to add coins: $e"
+      "message": "An error occurred while trying to add coins: $e"
     };
   }
 }
@@ -96,7 +96,7 @@ Future<Map<String, dynamic>> updateXp({required int newXpValue}) async {
   } catch (e) {
     return {
       "status": "error",
-      "messgage": "An error occurred while trying to add xp: $e"
+      "message": "An error occurred while trying to add xp: $e"
     };
   }
 }
@@ -114,7 +114,7 @@ Future<Map<String, dynamic>> updateLevel({required int newLevel}) async {
   } catch (e) {
     return {
       "status": "error",
-      "messgage": "An error occurred while trying to add level: $e"
+      "message": "An error occurred while trying to add level: $e"
     };
   }
 }
