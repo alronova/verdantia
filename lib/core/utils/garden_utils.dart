@@ -37,11 +37,22 @@ Future<void> initializeGardenIfNeeded() async {
 }
 
 // image loading functions
-// getting all 19 sprites
+// getting all 19 plot sprites
 Future<List<ui.Image>> loadAllPlotFrames() async {
   final List<ui.Image> frames = [];
   for (int i = 1; i <= 19; i++) {
     final data = await rootBundle.load('assets/ground/Grd_$i.png');
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    final frame = await codec.getNextFrame();
+    frames.add(frame.image);
+  }
+  return frames;
+}
+
+Future<List<ui.Image>> loadAllCanFrames() async {
+  final List<ui.Image> frames = [];
+  for (int i = 1; i <= 24; i++) {
+    final data = await rootBundle.load('assets/watercan/WC_$i.png');
     final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
     final frame = await codec.getNextFrame();
     frames.add(frame.image);

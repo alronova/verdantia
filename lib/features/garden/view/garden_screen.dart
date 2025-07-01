@@ -14,8 +14,13 @@ class GardenScreen extends StatefulWidget {
   State<GardenScreen> createState() => _GardenScreenState();
 }
 
-class _GardenScreenState extends State<GardenScreen> {
+class _GardenScreenState extends State<GardenScreen>
+    with TickerProviderStateMixin {
   List<ui.Image>? plotFrames;
+  List<ui.Image>? canFrames;
+  late final AnimationController _controller;
+  final List<AnimatedObject> activeAnimations = [];
+  Duration _lastElapsed = Duration.zero;
 
   @override
   void initState() {
@@ -27,7 +32,25 @@ class _GardenScreenState extends State<GardenScreen> {
       });
     });
 
+    loadAllCanFrames().then((frames) {
+      setState(() {
+        canFrames = frames;
+      });
+    });
+
     context.read<GardenBloc>().add(LoadGarden());
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10000),
+    );
+
+    _controller.addListener(() {
+      setState(() {
+        activeAnimations.removeWhere((anim) => anim.isDone);
+      });
+    });
+
+    _controller.repeat();
   }
 
   @override
@@ -53,30 +76,39 @@ class _GardenScreenState extends State<GardenScreen> {
           }
         }
         return GestureDetector(
-            onTapDown: (details) {
-              final tap = details.localPosition;
-              final index = findTappedPlotIndex(
-                tap,
-                plotPositions,
-                plotFrames!,
-              );
+          onTapDown: (details) {
+            final tap = details.localPosition;
+            final index = findTappedPlotIndex(
+              tap,
+              plotPositions,
+              plotFrames!,
+            );
 
-              if (index != null) {
-                context.read<PlotsCubit>().waterPlot(index);
+            if (index != null) {
+              final adjustedTap =
+                  tap.translate(-30, -30); // optional position adjustment
+              activeAnimations.add(WateringCanAnimation(
+                frames: canFrames!,
+                position: adjustedTap,
+              ));
 
-                // also update in firestore via gardenbloc
-                final plot = context.read<PlotsCubit>().getByIndex(index);
+              context.read<PlotsCubit>().waterPlot(index);
 
-                final updatedPlot = plot.copyWith(lastWatered: DateTime.now());
-                context.read<GardenBloc>().add(UpdatePlot(updatedPlot));
-              }
-            },
-            child: CustomPaint(
-              painter: GardenPainter(
-                  plots: plots,
-                  positions: plotPositions,
-                  plotFrames: plotFrames!),
-            ));
+              final plot = context.read<PlotsCubit>().getByIndex(index);
+              final updatedPlot = plot.copyWith(lastWatered: DateTime.now());
+              context.read<GardenBloc>().add(UpdatePlot(updatedPlot));
+            }
+          },
+          child: CustomPaint(
+            painter: GardenPainter(
+              repaint: _controller,
+              plots: plots,
+              positions: plotPositions,
+              plotFrames: plotFrames!,
+              animatedObjects: activeAnimations, // ✅ Pass here
+            ),
+          ),
+        );
       }),
     );
   }
@@ -86,6 +118,7 @@ class GardenPainter extends CustomPainter {
   final List<Plot> plots;
   final List<Offset> positions;
   final List<ui.Image> plotFrames;
+  final List<AnimatedObject> animatedObjects;
   final bool showHitboxes;
 
   GardenPainter({
@@ -93,7 +126,8 @@ class GardenPainter extends CustomPainter {
     required this.plots,
     required this.positions,
     required this.plotFrames,
-    this.showHitboxes = true, // Toggle to false in production
+    required this.animatedObjects,
+    this.showHitboxes = true,
   });
 
   @override
@@ -120,6 +154,10 @@ class GardenPainter extends CustomPainter {
       if (showHitboxes) {
         _drawDiamondHitbox(canvas, pos, image);
       }
+    }
+
+    for (final anim in animatedObjects) {
+      anim.paint(canvas);
     }
   }
 
@@ -159,4 +197,60 @@ class GardenPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+abstract class AnimatedObject {
+  late bool isDone;
+  void update(Duration delta);
+  void paint(Canvas canvas);
+}
+
+class WateringCanAnimation extends AnimatedObject {
+  final List<ui.Image> frames;
+  final Offset position;
+  final double duration = 1.5; // seconds
+
+  late final Stopwatch _stopwatch;
+  bool _isDone = false;
+
+  WateringCanAnimation({
+    required this.frames,
+    required this.position,
+  }) {
+    _stopwatch = Stopwatch()..start();
+  }
+
+  @override
+  bool get isDone {
+    return _stopwatch.elapsed.inMilliseconds / 1000.0 > duration;
+  }
+
+  @override
+  void update(Duration delta) {
+    // nothing needed here anymore
+  }
+
+  @override
+  void paint(Canvas canvas) {
+    final time = _stopwatch.elapsed.inMilliseconds / 1000.0;
+    final t = (time / duration).clamp(0.0, 1.0);
+
+    int frameIndex = (t * frames.length).floor();
+    frameIndex = frameIndex.clamp(0, frames.length - 1);
+
+    final image = frames[frameIndex];
+    final paint = Paint();
+    final dst = Rect.fromLTWH(
+      position.dx,
+      position.dy,
+      image.width * 0.25,
+      image.height * 0.25,
+    );
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      dst,
+      paint,
+    );
+  }
 }
