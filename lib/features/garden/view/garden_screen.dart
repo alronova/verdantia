@@ -54,6 +54,12 @@ class _GardenScreenState extends State<GardenScreen>
   }
 
   @override
+  void dispose() {
+    _controller.dispose(); // <--- Must dispose
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocListener<GardenBloc, GardenState>(
       listener: (context, state) {
@@ -61,55 +67,68 @@ class _GardenScreenState extends State<GardenScreen>
           context.read<PlotsCubit>().setPlots(state.plots);
         }
       },
-      child: BlocBuilder<PlotsCubit, List<Plot>>(builder: (context, plots) {
-        if (plots.isEmpty || plotFrames == null) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        final tileWidth = 70.0; // or the actual sprite width
-        final tileHeight = 28.0; // or half of height if isometric
-
-        final plotPositions = <Offset>[];
-        for (int row = 0; row < 4; row++) {
-          for (int col = 0; col < 4; col++) {
-            plotPositions.add(isoTilePosition(row, col, tileWidth, tileHeight));
+      child: BlocBuilder<PlotsCubit, List<Plot>>(
+        builder: (context, plots) {
+          if (plots.isEmpty || plotFrames == null) {
+            return Center(child: CircularProgressIndicator());
           }
-        }
-        return GestureDetector(
-          onTapDown: (details) {
-            final tap = details.localPosition;
-            final index = findTappedPlotIndex(
-              tap,
-              plotPositions,
-              plotFrames!,
-            );
 
-            if (index != null) {
-              final adjustedTap =
-                  tap.translate(-30, -30); // optional position adjustment
-              activeAnimations.add(WateringCanAnimation(
-                frames: canFrames!,
-                position: adjustedTap,
-              ));
+          final tileWidth = 70.0; // or the actual sprite width
+          final tileHeight = 28.0; // or half of height if isometric
 
-              context.read<PlotsCubit>().waterPlot(index);
-
-              final plot = context.read<PlotsCubit>().getByIndex(index);
-              final updatedPlot = plot.copyWith(lastWatered: DateTime.now());
-              context.read<GardenBloc>().add(UpdatePlot(updatedPlot));
+          final plotPositions = <Offset>[];
+          for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+              plotPositions
+                  .add(isoTilePosition(row, col, tileWidth, tileHeight));
             }
-          },
-          child: CustomPaint(
-            painter: GardenPainter(
-              repaint: _controller,
-              plots: plots,
-              positions: plotPositions,
-              plotFrames: plotFrames!,
-              animatedObjects: activeAnimations, // ✅ Pass here
+          }
+          return GestureDetector(
+            onTapDown: (details) {
+              final box = context.findRenderObject() as RenderBox;
+              final localTap = box.globalToLocal(details.globalPosition);
+
+              // Center offset (same as what Center applies)
+              final gardenOffset = Offset(
+                (box.size.width - 400) / 2,
+                (box.size.height - 400) / 2,
+              );
+
+              final tap = localTap - gardenOffset;
+
+              final index =
+                  findTappedPlotIndex(tap, plotPositions, plotFrames!);
+
+              if (index != null) {
+                final adjustedTap =
+                    tap.translate(-45, -35); // optional position adjustment
+                activeAnimations.add(WateringCanAnimation(
+                  frames: canFrames!,
+                  position: adjustedTap,
+                ));
+
+                context.read<PlotsCubit>().waterPlot(index);
+
+                final plot = context.read<PlotsCubit>().getByIndex(index);
+                final updatedPlot = plot.copyWith(lastWatered: DateTime.now());
+                context.read<GardenBloc>().add(UpdatePlot(updatedPlot));
+              }
+            },
+            child: Center(
+              child: CustomPaint(
+                painter: GardenPainter(
+                  repaint: _controller,
+                  plots: plots,
+                  positions: plotPositions,
+                  plotFrames: plotFrames!,
+                  animatedObjects: activeAnimations, // ✅ Pass here
+                ),
+                size: Size(400, 400),
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 }
@@ -127,7 +146,7 @@ class GardenPainter extends CustomPainter {
     required this.positions,
     required this.plotFrames,
     required this.animatedObjects,
-    this.showHitboxes = true,
+    this.showHitboxes = false,
   });
 
   @override
