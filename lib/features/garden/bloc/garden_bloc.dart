@@ -51,14 +51,14 @@ class GardenBloc extends Bloc<GardenEvent, GardenState> {
           updated = true;
           break;
         }
-
-        if (!updated) {
-          plotList.add(event.plot.toJson());
-        }
-
-        await userDoc.doc(userId).update({'plot': plotList});
-        add(LoadGarden());
       }
+
+      if (!updated) {
+        plotList.add(event.plot.toJson());
+      }
+
+      await userDoc.doc(userId).update({'plot': plotList});
+      add(LoadGarden());
     } catch (e) {
       emit(GardenError(message: e.toString()));
     }

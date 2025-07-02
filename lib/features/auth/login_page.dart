@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:verdantia/core/utils/garden_utils.dart';
 import 'auth_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -52,9 +53,12 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
-      // if (!mounted) return;
-      // take user to books screen
-      // context.go('/books');
+      // initialize garden if its missing
+      await initializeGardenIfNeeded();
+
+      if (!mounted) return;
+      // take user to garden screen
+      context.go('/garden');
     } on FirebaseAuthException catch (e) {
       String message;
       if (e.code == 'user-not-found') {
