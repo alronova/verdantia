@@ -1,34 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:verdantia/features/garden/view/garden_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:verdantia/app/app.dart';
 // pages
 import '../landing_page.dart';
 import '../features/auth/login_page.dart';
 import '../features/auth/signup_page.dart';
+import 'package:verdantia/features/garden/view/garden_screen.dart';
+import 'package:verdantia/features/chat/chat_screen.dart';
 
-final GoRouter router = GoRouter(routes: <RouteBase>[
-  GoRoute(
-    path: '/',
-    builder: (BuildContext context, GoRouterState state) {
-      return const LandingPage();
-    },
-  ),
-  GoRoute(
-    path: '/login',
-    builder: (BuildContext context, GoRouterState state) {
-      return const LoginPage();
-    },
-  ),
-  GoRoute(
-    path: '/signup',
-    builder: (BuildContext context, GoRouterState state) {
-      return const SignupPage();
-    },
-  ),
-  GoRoute(
-    path: '/garden',
-    builder: (BuildContext context, GoRouterState state) {
-      return const GardenScreen();
-    },
-  ),
-]);
+final GoRouter router = GoRouter(
+  initialLocation: '/',
+  redirect: (context, state) {
+    final user = FirebaseAuth.instance.currentUser;
+    final loggingIn = state.uri.path == '/login' || state.uri.path == '/signup';
+
+    if (user == null && state.uri.path == '/home') {
+      // Redirect unauthenticated users trying to access protected route
+      return '/login';
+    }
+
+    if (user != null && (state.uri.path == '/' || loggingIn)) {
+      // Redirect logged-in users away from login/signup/landing
+      return '/home';
+    }
+
+    // No redirection
+    return null;
+  },
+  routes: <RouteBase>[
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const LandingPage(),
+    ),
+    GoRoute(
+      path: '/home',
+      builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/signup',
+      builder: (context, state) => const SignupPage(),
+    ),
+    GoRoute(
+      path: '/garden',
+      builder: (context, state) => const GardenScreen(),
+    ),
+    GoRoute(
+      path: '/chat',
+      builder: (context, state) => const ChatScreen(),
+    ),
+  ],
+);
