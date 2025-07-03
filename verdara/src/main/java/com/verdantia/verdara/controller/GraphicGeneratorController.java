@@ -59,6 +59,9 @@ public class GraphicGeneratorController {
         }
 
         response.setContentType("image/png");
+        response.setHeader("Content-Disposition", "inline; filename=\"tree.png\"");
         ImageIO.write(image, "png", response.getOutputStream());
+        response.getOutputStream().flush();
+        response.getOutputStream().close();
     }
 }
