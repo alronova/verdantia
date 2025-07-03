@@ -1,0 +1,199 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  Set<int> selectedIndexes = {};
+
+  void toggleSelection(int index) {
+    setState(() {
+      if (selectedIndexes.contains(index)) {
+        // deselect if already selected
+        selectedIndexes.remove(index);
+      } else if (selectedIndexes.length < 2) {
+        // select only if fewer than 2 selected
+        selectedIndexes.add(index);
+      }
+      // do nothing if already 2 selected
+    });
+  }
+
+  Future<void> _handleSubmit() async {}
+
+  bool isButtonEnabled() => selectedIndexes.length == 2;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/new/startgrowing.png', // replace with your background path
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Foreground content
+          SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    'START GROWING',
+                    style: GoogleFonts.pixelifySans(
+                      fontSize: 30,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                      '🌱 Select two plants of your choice or let us customise one for you…'),
+                  const SizedBox(height: 12),
+
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xffE8E6B9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black, width: 1),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Customize',
+                        style: GoogleFonts.dmMono(
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // grid of plant boxes
+                  Expanded(
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1,
+                      children: List.generate(6, (index) {
+                        return SelectablePlantBox(
+                          isSelected: selectedIndexes.contains(index),
+                          onTap: () => toggleSelection(index),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Image.asset('assets/plants/plant_$index.png',
+                              // height: 60),
+                              const SizedBox(height: 8),
+                              Text('Plant ${index + 1}'),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // start planting button
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: ElevatedButton.icon(
+                      onPressed: isButtonEnabled() ? _handleSubmit : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xffF3EFB1),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(width: 1, color: Colors.black),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
+                      ),
+                      label: Text(
+                        'Start Planting!',
+                        style: GoogleFonts.pixelifySans(fontSize: 15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// selectable plant box
+class SelectablePlantBox extends StatelessWidget {
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Widget? child;
+
+  const SelectablePlantBox({
+    Key? key,
+    required this.isSelected,
+    required this.onTap,
+    this.child,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xffD2DBA7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.black,
+            width: 1,
+          ),
+        ),
+        child: Stack(
+          children: [
+            if (child != null) Center(child: child!),
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.all(6.0),
+                child: SizedBox(
+                  height: 6,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(0xffEFF3D5),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (isSelected)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Icon(Icons.check_circle, color: Colors.green),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

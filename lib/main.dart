@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:verdantia/features/settings/bloc/user_cubit.dart';
 import 'package:verdantia/firebase_options.dart';
 // pages
 import './app/app.dart';
@@ -28,6 +31,12 @@ Future<void> main() async {
         ),
         BlocProvider<PlotsCubit>(
           create: (BuildContext context) => PlotsCubit(),
+        ),
+        BlocProvider<UserCubit>(
+          create: (BuildContext context) => UserCubit(
+              FirebaseFirestore.instance,
+              FirebaseAuth.instance.currentUser!.uid)
+            ..loadUser(),
         ),
       ],
       child: MyApp(),

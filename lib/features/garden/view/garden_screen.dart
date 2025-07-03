@@ -2,8 +2,12 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:verdantia/data/models/plot_model.dart';
+import 'package:verdantia/data/models/user_model.dart';
 import 'package:verdantia/features/garden/bloc/garden_bloc.dart';
 import 'package:verdantia/features/garden/bloc/plotgrid_cubit.dart';
+import 'package:verdantia/features/garden/widgets/coinxp_widget.dart';
+import 'package:verdantia/features/garden/widgets/misc_widgets.dart';
+import 'package:verdantia/features/settings/bloc/user_cubit.dart';
 
 import '../../../core/utils/garden_utils.dart';
 
@@ -19,125 +23,229 @@ class _GardenScreenState extends State<GardenScreen>
   List<ui.Image>? plotFrames;
   List<ui.Image>? canFrames;
   late final AnimationController _controller;
-  final List<AnimatedObject> activeAnimations = [];
-  Duration _lastElapsed = Duration.zero;
+  // final Duration _lastElapsed = Duration.zero;
 
+  // initState
   @override
   void initState() {
     super.initState();
 
+    // load all plot frames
     loadAllPlotFrames().then((frames) {
       setState(() {
         plotFrames = frames;
       });
     });
-
+    // load all can frames
     loadAllCanFrames().then((frames) {
       setState(() {
         canFrames = frames;
       });
     });
 
+    // tell gardenbloc to load the garden into gardenloaded state
+    // from firestore
     context.read<GardenBloc>().add(LoadGarden());
+
+    // create an animation controller for the plot
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10000),
     );
-
-    _controller.addListener(() {
-      setState(() {
-        activeAnimations.removeWhere((anim) => anim.isDone);
-      });
-    });
 
     _controller.repeat();
   }
 
   @override
   void dispose() {
+    // must dispose the animation controller or itll cause the app to hang while switching screens
     _controller.dispose(); // <--- Must dispose
     super.dispose();
   }
 
+  // ----------------------- WIDGETS --------------------------
   @override
   Widget build(BuildContext context) {
-    return BlocListener<GardenBloc, GardenState>(
-      listener: (context, state) {
-        if (state is GardenLoaded) {
-          context.read<PlotsCubit>().setPlots(state.plots);
-        }
-      },
-      child: BlocBuilder<PlotsCubit, List<Plot>>(
-        builder: (context, plots) {
-          if (plots.isEmpty || plotFrames == null) {
-            return Center(child: CircularProgressIndicator());
-          }
+    // final screen = MediaQuery.of(context).size;
+    // listens to gardenstate
+    return Stack(
+      children: [
+        // background
+        Positioned.fill(
+          child: Image.asset(
+            'assets/new/garden.png',
+            fit: BoxFit.cover,
+          ),
+        ),
+        BlocBuilder<UserCubit, AppUser?>(
+          builder: (context, user) {
+            // if (user == null) return SizedBox();
 
-          final tileWidth = 70.0; // or the actual sprite width
-          final tileHeight = 28.0; // or half of height if isometric
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 30),
+              child: Column(
+                children: [
+                  // xp and coins bar
+                  HeaderBar(coins: 30, currentXp: 25, currentLevel: 0),
 
-          final plotPositions = <Offset>[];
-          for (int row = 0; row < 4; row++) {
-            for (int col = 0; col < 4; col++) {
-              plotPositions
-                  .add(isoTilePosition(row, col, tileWidth, tileHeight));
-            }
-          }
-          return GestureDetector(
-            onTapDown: (details) {
-              final box = context.findRenderObject() as RenderBox;
-              final localTap = box.globalToLocal(details.globalPosition);
+                  //
+                  BlocListener<GardenBloc, GardenState>(
+                    listener: (context, state) {
+                      if (state is GardenLoaded) {
+                        context.read<PlotsCubit>().setPlots(state.plots);
+                      }
+                    },
 
-              // Center offset (same as what Center applies)
-              final gardenOffset = Offset(
-                (box.size.width - 400) / 2,
-                (box.size.height - 400) / 2,
-              );
+                    // garden plots
+                    child: BlocBuilder<PlotsCubit, List<Plot>>(
+                      builder: (context, plots) {
+                        if (plots.isEmpty || plotFrames == null) {
+                          return Center(child: CircularProgressIndicator());
+                        }
 
-              final tap = localTap - gardenOffset;
+                        final tileWidth = 70.0; // or the actual sprite width
+                        final tileHeight =
+                            28.0; // or half of height if isometric
 
-              final index =
-                  findTappedPlotIndex(tap, plotPositions, plotFrames!);
+                        // isometric plot positions
+                        final plotPositions = <Offset>[];
+                        for (int row = 0; row < 4; row++) {
+                          for (int col = 0; col < 4; col++) {
+                            plotPositions.add(isoTilePosition(
+                                row, col, tileWidth, tileHeight));
+                          }
+                        }
 
-              if (index != null) {
-                final adjustedTap =
-                    tap.translate(-45, -35); // optional position adjustment
-                activeAnimations.add(WateringCanAnimation(
-                  frames: canFrames!,
-                  position: adjustedTap,
-                ));
+                        final canvasSize = const Size(
+                            500, 400); // same as your CustomPaint size
+                        final offsetToCenter =
+                            computeOffsetToCenter(plotPositions, canvasSize);
+                        final offsetPlotPositions = plotPositions
+                            .map((p) => p + offsetToCenter)
+                            .toList();
 
-                context.read<PlotsCubit>().waterPlot(index);
-
-                final plot = context.read<PlotsCubit>().getByIndex(index);
-                final updatedPlot = plot.copyWith(lastWatered: DateTime.now());
-                context.read<GardenBloc>().add(UpdatePlot(updatedPlot));
-              }
-            },
-            child: Center(
-              child: CustomPaint(
-                painter: GardenPainter(
-                  repaint: _controller,
-                  plots: plots,
-                  positions: plotPositions,
-                  plotFrames: plotFrames!,
-                  animatedObjects: activeAnimations, // ✅ Pass here
-                ),
-                size: Size(400, 400),
+                        // gesture detector to find the index of the plot that was tapped
+                        return Column(
+                          children: [
+                            SizedBox(height: 20),
+                            Container(
+                              decoration: BoxDecoration(
+                                color:
+                                    const ui.Color.fromARGB(255, 238, 236, 208),
+                                borderRadius: BorderRadius.circular(20),
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
+                              ),
+                              child: Center(
+                                child: CustomPaint(
+                                  painter: GardenPainter(
+                                    repaint: _controller,
+                                    plots: plots,
+                                    positions: offsetPlotPositions,
+                                    plotFrames: plotFrames!,
+                                  ),
+                                  size: Size(500, 400),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Container(
+                              decoration: BoxDecoration(
+                                color:
+                                    const ui.Color.fromARGB(255, 238, 236, 208),
+                                borderRadius: BorderRadius.circular(8),
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "Total plants",
+                                      style: pixelStyle,
+                                    ),
+                                    Text(
+                                      "2",
+                                      style: pixelStyle,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Container(
+                              decoration: BoxDecoration(
+                                color:
+                                    const ui.Color.fromARGB(255, 238, 236, 208),
+                                borderRadius: BorderRadius.circular(8),
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "Garden Health",
+                                      style: pixelStyle,
+                                    ),
+                                    Text(
+                                      "89%",
+                                      style: pixelStyle,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                actionButton(
+                                    "Water",
+                                    () => openPlantActionScreen(
+                                        context, PlantAction.water)),
+                                actionButton(
+                                    "Sun",
+                                    () => openPlantActionScreen(
+                                        context, PlantAction.sunlight)),
+                                actionButton(
+                                    "Fertilize",
+                                    () => openPlantActionScreen(
+                                        context, PlantAction.fertilize)),
+                                actionButton(
+                                    "View",
+                                    () => openPlantActionScreen(
+                                        context, PlantAction.view)),
+                              ],
+                            )
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
+// ----------------------- WIDGETS --------------------------
 
+// custom painter child class
 class GardenPainter extends CustomPainter {
   final List<Plot> plots;
   final List<Offset> positions;
   final List<ui.Image> plotFrames;
-  final List<AnimatedObject> animatedObjects;
+  // final List<AnimatedObject> animatedObjects;
   final bool showHitboxes;
 
   GardenPainter({
@@ -145,19 +253,38 @@ class GardenPainter extends CustomPainter {
     required this.plots,
     required this.positions,
     required this.plotFrames,
-    required this.animatedObjects,
+    // required this.animatedObjects,
     this.showHitboxes = false,
   });
-
   @override
   void paint(Canvas canvas, Size size) {
     final now = DateTime.now();
 
+    // --- Grid centering ---
+    double minX = double.infinity;
+    double maxX = double.negativeInfinity;
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    for (final pos in positions) {
+      if (pos.dx < minX) minX = pos.dx;
+      if (pos.dx > maxX) maxX = pos.dx;
+      if (pos.dy < minY) minY = pos.dy;
+      if (pos.dy > maxY) maxY = pos.dy;
+    }
+
+    final gridCenter = Offset((minX + maxX) / 2, (minY + maxY) / 2);
+    final canvasCenter = Offset(size.width / 2, size.height / 2);
+    final offsetToCenter = canvasCenter - gridCenter;
+
+    canvas.save();
+    canvas.translate(offsetToCenter.dx, offsetToCenter.dy);
+
+    // --- Draw plots ---
     for (int i = 0; i < plots.length; i++) {
       final plot = plots[i];
       final pos = positions[i];
 
-      // Water level calculation
       int frameIndex = 0;
       if (plot.lastWatered != null) {
         final elapsed = now.difference(plot.lastWatered!).inSeconds;
@@ -166,8 +293,6 @@ class GardenPainter extends CustomPainter {
       }
 
       final image = plotFrames[frameIndex];
-
-      // Draw the tile sprite
       drawPlot(canvas, pos, image);
 
       if (showHitboxes) {
@@ -175,18 +300,17 @@ class GardenPainter extends CustomPainter {
       }
     }
 
-    for (final anim in animatedObjects) {
-      anim.paint(canvas);
-    }
+    canvas.restore();
   }
 
+  // function to draw diamond shaped hitboxes for the garden plots
   void _drawDiamondHitbox(Canvas canvas, Offset pos, ui.Image image) {
     const scale = 0.25;
     final width = image.width * scale;
     final height = image.height * scale;
 
-    final centerX = pos.dx + width / 2;
-    final centerY = pos.dy + height / 1.6;
+    final centerX = pos.dx - 40 + width / 2;
+    final centerY = pos.dy - 45 + height / 1.6;
 
     final halfW = width / 2;
     final halfH = height / 6;
@@ -216,60 +340,4 @@ class GardenPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-abstract class AnimatedObject {
-  late bool isDone;
-  void update(Duration delta);
-  void paint(Canvas canvas);
-}
-
-class WateringCanAnimation extends AnimatedObject {
-  final List<ui.Image> frames;
-  final Offset position;
-  final double duration = 1.5; // seconds
-
-  late final Stopwatch _stopwatch;
-  bool _isDone = false;
-
-  WateringCanAnimation({
-    required this.frames,
-    required this.position,
-  }) {
-    _stopwatch = Stopwatch()..start();
-  }
-
-  @override
-  bool get isDone {
-    return _stopwatch.elapsed.inMilliseconds / 1000.0 > duration;
-  }
-
-  @override
-  void update(Duration delta) {
-    // nothing needed here anymore
-  }
-
-  @override
-  void paint(Canvas canvas) {
-    final time = _stopwatch.elapsed.inMilliseconds / 1000.0;
-    final t = (time / duration).clamp(0.0, 1.0);
-
-    int frameIndex = (t * frames.length).floor();
-    frameIndex = frameIndex.clamp(0, frames.length - 1);
-
-    final image = frames[frameIndex];
-    final paint = Paint();
-    final dst = Rect.fromLTWH(
-      position.dx,
-      position.dy,
-      image.width * 0.25,
-      image.height * 0.25,
-    );
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      dst,
-      paint,
-    );
-  }
 }

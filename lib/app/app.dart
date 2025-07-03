@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:verdantia/features/chat/chat_screen.dart';
 import 'package:verdantia/features/garden/view/garden_screen.dart';
+import 'package:verdantia/features/settings/view/settings_screen.dart';
 import './router.dart';
 
 class MyApp extends StatelessWidget {
@@ -15,7 +16,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
-        textTheme: GoogleFonts.lexendDecaTextTheme(),
+        textTheme: GoogleFonts.kodeMonoTextTheme(),
       ),
       debugShowCheckedModeBanner: false,
       routerConfig: router,
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _pages = const [
     GardenScreen(),
     ChatScreen(),
+    SettingsScreen()
   ];
 
   @override
@@ -53,6 +55,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.chat),
             label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),

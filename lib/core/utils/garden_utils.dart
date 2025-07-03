@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:verdantia/features/garden/view/plant_action_screen.dart';
 
 Future<void> initializeGardenIfNeeded() async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -89,11 +90,12 @@ bool isPointInsideDiamond(Offset point, Offset pos, ui.Image image) {
   final width = image.width * scale;
   final height = image.height * scale;
 
-  final centerX = pos.dx + width / 2;
-  final centerY = pos.dy + height / 1.6;
+  // Apply the same manual shift used when drawing
+  final adjustedX = pos.dx - 40 + width / 2;
+  final adjustedY = pos.dy - 45 + height / 1.6;
 
-  final dx = (point.dx - centerX).abs();
-  final dy = (point.dy - centerY).abs();
+  final dx = (point.dx - adjustedX).abs();
+  final dy = (point.dy - adjustedY).abs();
 
   final halfW = width / 2;
   final halfH = height / 6;
@@ -101,13 +103,10 @@ bool isPointInsideDiamond(Offset point, Offset pos, ui.Image image) {
   return (dx / halfW + dy / halfH) <= 1;
 }
 
-// positioning math
-
-// deciding coordinates for isometric tiles
 Offset isoTilePosition(int row, int col, double tileWidth, double tileHeight) {
   double x = (col - row) * tileWidth / 2;
   double y = (col + row) * tileHeight / 2;
-  return Offset(x + 150, y + 100); // Add offset to center in canvas
+  return Offset(x, y);
 }
 
 // drawing helpers
@@ -117,11 +116,45 @@ void drawPlot(Canvas canvas, Offset position, ui.Image plotImage,
   final paint = Paint();
   final srcRect = Rect.fromLTWH(
       0, 0, plotImage.width.toDouble(), plotImage.height.toDouble());
-  final dstRect = Rect.fromLTWH(
-    position.dx,
-    position.dy,
-    plotImage.width * scale,
-    plotImage.height * scale,
+
+  final dstRect = Rect.fromCenter(
+    center: position,
+    width: plotImage.width * scale,
+    height: plotImage.height * scale,
   );
+
   canvas.drawImageRect(plotImage, srcRect, dstRect, paint);
+}
+
+Offset computeOffsetToCenter(List<Offset> positions, Size canvasSize) {
+  double minX = double.infinity;
+  double maxX = double.negativeInfinity;
+  double minY = double.infinity;
+  double maxY = double.negativeInfinity;
+
+  for (final pos in positions) {
+    if (pos.dx < minX) minX = pos.dx;
+    if (pos.dx > maxX) maxX = pos.dx;
+    if (pos.dy < minY) minY = pos.dy;
+    if (pos.dy > maxY) maxY = pos.dy;
+  }
+
+  final gridCenter = Offset((minX + maxX) / 2, (minY + maxY) / 2);
+  final canvasCenter =
+      Offset(canvasSize.width / 2 - 100, canvasSize.height / 2);
+
+  return canvasCenter - gridCenter;
+}
+
+//
+//
+enum PlantAction { water, sunlight, fertilize, view }
+
+void openPlantActionScreen(BuildContext context, PlantAction action) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => PlantActionScreen(action: action),
+    ),
+  );
 }

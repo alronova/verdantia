@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:verdantia/core/services/firebase_service.dart';
 
 enum AuthStatus { authenticated, unauthenticated }
 
@@ -20,12 +22,69 @@ class AuthState {
 class AuthCubit extends Cubit<AuthState> {
   AuthCubit() : super(AuthState.unauthenticated());
 
-  void login({required String username}) {
-    emit(AuthState.authenticated(username: username));
+  Future<String?> login({
+    required String email,
+    required String password,
+    required BuildContext context,
+  }) async {
+    if (email.isEmpty || password.isEmpty) {
+      return "Email and password cannot be empty";
+    }
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      await initializeGardenIfNeeded();
+
+      if (!context.mounted) return null;
+      checkAndNavigateAfterLogin(context);
+
+      return null; // success
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        return 'No user found for this email.';
+      } else if (e.code == 'wrong-password') {
+        return 'Wrong password provided for this user.';
+      } else {
+        return "An unknown error occurred";
+      }
+    }
   }
 
-  void logout() {
-    emit(AuthState.unauthenticated());
+  Future<String?> signup({
+    required String email,
+    required String password,
+    required String username,
+    required BuildContext context,
+  }) async {
+    if (email.isEmpty || password.isEmpty || username.isEmpty) {
+      return "Username, email and password cannot be empty";
+    }
+
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      await initializeGardenIfNeeded();
+
+      if (!context.mounted) return null;
+      checkAndNavigateAfterLogin(context);
+
+      return null; // success
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'weak-password') {
+        return 'The password provided is too weak.';
+      } else if (e.code == 'email-already-in-use') {
+        return 'An account already exists with this email.';
+      } else {
+        return "An unknown error occurred";
+      }
+    }
   }
 
   Future<void> initializeGardenIfNeeded() async {
@@ -35,12 +94,14 @@ class AuthCubit extends Cubit<AuthState> {
     final userDoc = FirebaseFirestore.instance.collection('userdb').doc(uid);
     final doc = await userDoc.get();
 
-    if (!doc.exists || !(doc.data()?['plot']?.isNotEmpty ?? false)) {
-      // Generate 16 default plots
-      final List<Map<String, dynamic>> defaultPlots = List.generate(16, (i) {
+    final hasPlots =
+        doc.data()?['plot'] != null && (doc.data()?['plot'] as List).isNotEmpty;
+
+    if (!hasPlots) {
+      final defaultPlots = List.generate(16, (i) {
         return {
           'index': i,
-          'unlocked': i == 0, // unlock first one
+          'unlocked': i == 0, // Only first one unlocked
           'plantid': '',
           'lastWatered': Timestamp.now(),
         };

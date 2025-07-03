@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:verdantia/app/app.dart';
+import 'package:verdantia/features/onboarding/onboarding_screen.dart';
 // pages
 import '../landing_page.dart';
 import '../features/auth/login_page.dart';
@@ -52,6 +53,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/chat',
       builder: (context, state) => const ChatScreen(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
     ),
   ],
 );

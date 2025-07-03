@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 // models
 import '../../data/models/plant_model.dart';
 
@@ -95,56 +97,29 @@ Future<Map<String, dynamic>> updatePlants(
   }
 }
 
-// function to update coins
-Future<Map<String, dynamic>> updateCoins({required int newCoinValue}) async {
-  // getting the db
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-  final docRef = FirebaseFirestore.instance.collection('userdb').doc(userId);
+// function to check if onboarding is complete
+Future<void> checkAndNavigateAfterLogin(BuildContext context) async {
+  final user = FirebaseAuth.instance.currentUser;
 
-  try {
-    await docRef.update({'coins': newCoinValue});
-
-    return {"status": "success", "message": "Coins added successfully."};
-  } catch (e) {
-    return {
-      "status": "error",
-      "message": "An error occurred while trying to add coins: $e"
-    };
+  if (user == null) {
+    if (!context.mounted) return;
+    context.go('/');
   }
-}
 
-// function to update user xp
-Future<Map<String, dynamic>> updateXp({required int newXpValue}) async {
-  // getting the db
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-  final docRef = FirebaseFirestore.instance.collection('userdb').doc(userId);
+  final docRef = FirebaseFirestore.instance.collection('userdb').doc(user!.uid);
 
   try {
-    await docRef.update({'xp': newXpValue});
+    final docSnap = await docRef.get();
 
-    return {"status": "success", "message": "Xp added successfully."};
+    if (!docSnap.exists || docSnap.data()?['onboardingComplete'] != true) {
+      // if user doc doesnt exist
+      if (!context.mounted) return;
+      context.go('/onboarding');
+    } else {
+      if (!context.mounted) return;
+      context.go('/garden');
+    }
   } catch (e) {
-    return {
-      "status": "error",
-      "message": "An error occurred while trying to add xp: $e"
-    };
-  }
-}
-
-// function to update user level
-Future<Map<String, dynamic>> updateLevel({required int newLevel}) async {
-  // getting the db
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-  final docRef = FirebaseFirestore.instance.collection('userdb').doc(userId);
-
-  try {
-    await docRef.update({'level': newLevel});
-
-    return {"status": "success", "message": "Level added successfully."};
-  } catch (e) {
-    return {
-      "status": "error",
-      "message": "An error occurred while trying to add level: $e"
-    };
+    print('Error checking onboarding: $e');
   }
 }
