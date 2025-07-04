@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:verdantia/features/garden/view/plant_action_screen.dart';
+import 'package:verdantia/features/garden/view/view_action_screen.dart';
 
 Future<void> initializeGardenIfNeeded() async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -157,4 +158,26 @@ void openPlantActionScreen(BuildContext context, PlantAction action) {
       builder: (_) => PlantActionScreen(action: action),
     ),
   );
+}
+
+void openViewActionScreen(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ViewActionScreen(),
+    ),
+  );
+}
+
+String getActionLabel(PlantAction action) {
+  switch (action) {
+    case PlantAction.water:
+      return "Water";
+    case PlantAction.sunlight:
+      return "Sunlight";
+    case PlantAction.fertilize:
+      return "Fertilize";
+    case PlantAction.view:
+      return "View";
+  }
 }

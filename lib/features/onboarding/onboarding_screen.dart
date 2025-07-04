@@ -1,5 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:verdantia/core/services/image_gen_service.dart';
+import 'package:verdantia/features/onboarding/selected_plants_cubit.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -9,22 +15,61 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  final List<String> plantNames = [
+    'oak',
+    'pine',
+    'birch',
+    'willow',
+    'palm',
+    'maple'
+  ];
+
+  Map<String, String> plants = {
+    'oak': '',
+    'pine': '',
+    'birch': '',
+    'willow': '',
+    'palm': '',
+    'maple': ''
+  };
+
+  bool isLoading = true;
   Set<int> selectedIndexes = {};
+
+  @override
+  void initState() {
+    super.initState();
+    generateAllSprites();
+  }
+
+  Future<void> generateAllSprites() async {
+    for (var name in plantNames) {
+      final spritePath = await generatePlantSprite(name);
+      plants[name] = spritePath;
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
 
   void toggleSelection(int index) {
     setState(() {
       if (selectedIndexes.contains(index)) {
-        // deselect if already selected
         selectedIndexes.remove(index);
       } else if (selectedIndexes.length < 2) {
-        // select only if fewer than 2 selected
         selectedIndexes.add(index);
       }
-      // do nothing if already 2 selected
     });
   }
 
-  Future<void> _handleSubmit() async {}
+  void _handleSubmit() {
+    final selectedPlantNames =
+        selectedIndexes.map((index) => plantNames[index]).toList();
+
+    context.read<SelectedPlantsCubit>().selectPlants(selectedPlantNames);
+
+    context.go('/garden');
+  }
 
   bool isButtonEnabled() => selectedIndexes.length == 2;
 
@@ -58,54 +103,67 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                      '🌱 Select two plants of your choice or let us customise one for you…'),
+                  Text('🌱 Select two plants of your choice…'),
                   const SizedBox(height: 12),
 
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xffE8E6B9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black, width: 1),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Customize',
-                        style: GoogleFonts.dmMono(
-                          fontSize: 14,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Container(
+                  //   width: double.infinity,
+                  //   padding: const EdgeInsets.symmetric(vertical: 16),
+                  //   decoration: BoxDecoration(
+                  //     color: const Color(0xffE8E6B9),
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     border: Border.all(color: Colors.black, width: 1),
+                  //   ),
+                  //   child: Center(
+                  //     child: Text(
+                  //       'Customize',
+                  //       style: GoogleFonts.dmMono(
+                  //         fontSize: 14,
+                  //         color: Colors.black87,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                   const SizedBox(height: 16),
 
                   // grid of plant boxes
-                  Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1,
-                      children: List.generate(6, (index) {
-                        return SelectablePlantBox(
-                          isSelected: selectedIndexes.contains(index),
-                          onTap: () => toggleSelection(index),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Image.asset('assets/plants/plant_$index.png',
-                              // height: 60),
-                              const SizedBox(height: 8),
-                              Text('Plant ${index + 1}'),
-                            ],
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : Expanded(
+                          child: GridView.count(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 1,
+                            children: List.generate(plantNames.length, (index) {
+                              final plant = plantNames[index];
+                              final imagePath = plants[plant]!;
+
+                              return SelectablePlantBox(
+                                isSelected: selectedIndexes.contains(index),
+                                onTap: () => toggleSelection(index),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (imagePath.isNotEmpty)
+                                      Image.file(
+                                        File(imagePath),
+                                        height: 60,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(
+                                                Icons.image_not_supported),
+                                      )
+                                    else
+                                      const Icon(Icons.hourglass_empty),
+                                    const SizedBox(height: 8),
+                                    Text(plant[0].toUpperCase() +
+                                        plant.substring(1)),
+                                  ],
+                                ),
+                              );
+                            }),
                           ),
-                        );
-                      }),
-                    ),
-                  ),
+                        ),
 
                   const SizedBox(height: 12),
 

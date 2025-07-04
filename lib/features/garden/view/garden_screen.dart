@@ -7,6 +7,7 @@ import 'package:verdantia/features/garden/bloc/garden_bloc.dart';
 import 'package:verdantia/features/garden/bloc/plotgrid_cubit.dart';
 import 'package:verdantia/features/garden/widgets/coinxp_widget.dart';
 import 'package:verdantia/features/garden/widgets/misc_widgets.dart';
+import 'package:verdantia/features/onboarding/selected_plants_cubit.dart';
 import 'package:verdantia/features/settings/bloc/user_cubit.dart';
 
 import '../../../core/utils/garden_utils.dart';
@@ -66,6 +67,7 @@ class _GardenScreenState extends State<GardenScreen>
   // ----------------------- WIDGETS --------------------------
   @override
   Widget build(BuildContext context) {
+    final selectedPlants = context.watch<SelectedPlantsCubit>().state;
     // final screen = MediaQuery.of(context).size;
     // listens to gardenstate
     return Stack(
@@ -79,14 +81,18 @@ class _GardenScreenState extends State<GardenScreen>
         ),
         BlocBuilder<UserCubit, AppUser?>(
           builder: (context, user) {
-            // if (user == null) return SizedBox();
+            if (user == null) return SizedBox();
 
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 30),
               child: Column(
                 children: [
                   // xp and coins bar
-                  HeaderBar(coins: 30, currentXp: 25, currentLevel: 0),
+                  HeaderBar(
+                    coins: user.coins,
+                    currentXp: user.xp,
+                    currentLevel: user.level,
+                  ),
 
                   //
                   BlocListener<GardenBloc, GardenState>(
@@ -195,7 +201,7 @@ class _GardenScreenState extends State<GardenScreen>
                                       style: pixelStyle,
                                     ),
                                     Text(
-                                      "89%",
+                                      "100%",
                                       style: pixelStyle,
                                     ),
                                   ],
@@ -218,10 +224,8 @@ class _GardenScreenState extends State<GardenScreen>
                                     "Fertilize",
                                     () => openPlantActionScreen(
                                         context, PlantAction.fertilize)),
-                                actionButton(
-                                    "View",
-                                    () => openPlantActionScreen(
-                                        context, PlantAction.view)),
+                                actionButton("View",
+                                    () => openViewActionScreen(context)),
                               ],
                             )
                           ],

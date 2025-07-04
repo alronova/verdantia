@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:verdantia/core/services/firebase_service.dart';
+import 'package:verdantia/features/settings/bloc/user_cubit.dart';
 
 enum AuthStatus { authenticated, unauthenticated }
 
@@ -40,6 +41,7 @@ class AuthCubit extends Cubit<AuthState> {
       await initializeGardenIfNeeded();
 
       if (!context.mounted) return null;
+      context.read<UserCubit>().loadUser();
       checkAndNavigateAfterLogin(context);
 
       return null; // success
@@ -73,6 +75,7 @@ class AuthCubit extends Cubit<AuthState> {
       await initializeGardenIfNeeded();
 
       if (!context.mounted) return null;
+      context.read<UserCubit>().loadUser();
       checkAndNavigateAfterLogin(context);
 
       return null; // success

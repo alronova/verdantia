@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:verdantia/features/onboarding/selected_plants_cubit.dart';
 import 'package:verdantia/features/settings/bloc/user_cubit.dart';
 import 'package:verdantia/firebase_options.dart';
 // pages
@@ -37,6 +38,9 @@ Future<void> main() async {
               FirebaseFirestore.instance,
               FirebaseAuth.instance.currentUser!.uid)
             ..loadUser(),
+        ),
+        BlocProvider<SelectedPlantsCubit>(
+          create: (BuildContext context) => SelectedPlantsCubit(),
         ),
       ],
       child: MyApp(),

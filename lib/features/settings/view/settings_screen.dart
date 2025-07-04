@@ -131,13 +131,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                     SwitchListTile(
-                      title: const Text('Dark Mode'),
-                      value: darkMode,
-                      onChanged: (val) {
-                        setState(() => darkMode = val);
-                      },
-                    ),
-                    SwitchListTile(
                       title: const Text('Auto Backup'),
                       value: autoBackup,
                       onChanged: (val) {

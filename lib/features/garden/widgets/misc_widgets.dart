@@ -18,4 +18,5 @@ actionButton(String text, VoidCallback onTap) => ElevatedButton.icon(
       ),
     );
 
-TextStyle pixelStyle = GoogleFonts.pixelifySans();
+TextStyle pixelStyle =
+    GoogleFonts.pixelifySans(fontSize: 15, color: Colors.black);
