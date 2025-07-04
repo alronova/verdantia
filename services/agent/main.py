@@ -1,13 +1,9 @@
-import os
-import re
-import json
-import requests
-import asyncio
-import pika
+import os, re, json, requests, asyncio, pika, threading
 from langchain_tavily import TavilySearch
 from langgraph.graph import END, StateGraph
 from typing import TypedDict
 from dotenv import load_dotenv
+from flask import Flask
 from langchain.tools import Tool
 from langchain_community.utilities import SearchApiAPIWrapper
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -15,6 +11,15 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 amqp_url = os.getenv("CLOUDAMQP_URL")
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
+
+app = Flask(__name__)
+@app.route('/')
+def hello():
+    return 'Hello, World!'
+
+def start_flask():
+    print("[*] Starting Flask web server...")
+    app.run(host="0.0.0.0", port=os.getenv("PORT"))
 
 class GraphState(TypedDict):
     query: str
@@ -36,8 +41,7 @@ def callback(ch, method, properties, body):
     initial_state = {
         "query": f"For the plant {plant_name}, find its common names, locations, pests/diseases, best fertilizers/pesticides, planting & care tips, seed/fertilizer/pesticide links (Amazon), and appearance details: trunk/branch height, width, splits, angles, stem/leaf color, leaf shape, margin, vein, spacing, taper, alternate or not.",
         }
-    result = final_graph.invoke(initial_state)
-    print("Response:", result)
+    final_graph.invoke(initial_state)
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
@@ -110,9 +114,9 @@ def build_extraction_prompt(state):
     "fertilizers": ["..."],                                         // an array of fertilizer names as (strings)
     "pesticides": ["..."],                                          // an array of pesticide names as (strings)
     "instructions": "...",                                          // short description of taking care of the plant using the watering requirements data, sunlight hrs and so on (string)
-    "seed_buying_links": ["...", "...", ..],                        // an array of seed buying links as (strings)
-    "fertilizer_buying_links": ["...", "...", ..],                  // an array of fertilizer buying links as (strings)
-    "pesticide_buying_links": ["...", "...", ..],                   // an array of pesticide buying links as (strings)
+    "seed_buying_links": "https://amazon.com/s?k={{plant_seed}}",   
+    "fertilizer_buying_links": ["https://amazon.com/s?k={{fertilizer_1}}", "https://amazon.com/s?k={{fertilizer_2}}", ..],  // an array of fertilizer buying links as (strings)
+    "pesticide_buying_links": ["https://amazon.com/s?k={{pesticide_1}}", "https://amazon.com/s?k={{pesticide_2}}", ..],     // an array of pesticide buying links as (strings)
     "commonly_found": ["...","...","...", ..],                      // an array of locations where the plant is commonly found as (strings)
     "common_names": [],                                             // an array of common names of the plant as (strings)
     "appearance": {{
@@ -181,6 +185,11 @@ graph.add_edge("searchapi_search", "extract_plant_data")
 graph.add_edge("extract_plant_data", END)
 
 final_graph = graph.compile()
+
+if __name__ == "__main__":
+    # Start Flask in a thread
+    flask_thread = threading.Thread(target=start_flask)
+    flask_thread.start()
 
 channel.basic_consume(queue='create_new_plant', on_message_callback=callback)
 print("Waiting for messages...")
