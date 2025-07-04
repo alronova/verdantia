@@ -3,6 +3,7 @@ import re
 import json
 import requests
 import asyncio
+import pika
 from langchain_tavily import TavilySearch
 from langgraph.graph import END, StateGraph
 from typing import TypedDict
@@ -12,17 +13,30 @@ from langchain_community.utilities import SearchApiAPIWrapper
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
-
+amqp_url = os.getenv("CLOUDAMQP_URL")
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
-
-plant_name = input("Enter the plant name: ")
 
 class GraphState(TypedDict):
     query: str
+    plant_name: str
     tavily_results: list
     searchapi_results: str
-    # combined_results: str
     json_payload: dict
+
+params = pika.URLParameters(amqp_url)
+
+connection = pika.BlockingConnection(params)
+channel = connection.channel()
+channel.queue_declare(queue='create_new_plant')
+
+def callback(ch, method, properties, body):
+    message = body.decode()
+    print("Received:", message)
+    GraphState['plant_name'] = message
+
+    result = final_graph.invoke(initial_state)
+    print("Response:", result)
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 search = SearchApiAPIWrapper()
@@ -53,7 +67,7 @@ def search_node(state):
     return state
 
 def searchapi_search(state):
-    url = "https://www.searchapi.io/api/v1/search"
+    url = os.getenv("SEARCHAPI_BASE_URL")
     params = {
         "engine": "google",
         "q": state["query"],
@@ -169,4 +183,8 @@ final_graph = graph.compile()
 initial_state = {
     "query": f"For the plant {plant_name}, find its common names, locations, pests/diseases, best fertilizers/pesticides, planting & care tips, seed/fertilizer/pesticide links (Amazon), and appearance details: trunk/branch height, width, splits, angles, stem/leaf color, leaf shape, margin, vein, spacing, taper, alternate or not.",
     }
-final_graph.invoke(initial_state)
+
+
+channel.basic_consume(queue='create_new_plant', on_message_callback=callback)
+print("Waiting for messages...")
+channel.start_consuming()
