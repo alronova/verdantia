@@ -32,8 +32,10 @@ channel.queue_declare(queue='create_new_plant')
 def callback(ch, method, properties, body):
     message = body.decode()
     print("Received:", message)
-    GraphState['plant_name'] = message
-
+    plant_name = message
+    initial_state = {
+        "query": f"For the plant {plant_name}, find its common names, locations, pests/diseases, best fertilizers/pesticides, planting & care tips, seed/fertilizer/pesticide links (Amazon), and appearance details: trunk/branch height, width, splits, angles, stem/leaf color, leaf shape, margin, vein, spacing, taper, alternate or not.",
+        }
     result = final_graph.invoke(initial_state)
     print("Response:", result)
     ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -95,7 +97,7 @@ def searchapi_search(state):
     return state
 
 def build_extraction_prompt(state):
-    combined_data = f"{state["tavily_results"]}\n\n{state["searchapi_results"]}"
+    combined_data = f"{state["tavily_results"]}\n\n{state["searchapi_results"]}\n\n"
     prompt = f"""
     You are an expert botanist.
     From the following text, extract these attributes of the plant: "{state['query']}"
@@ -179,11 +181,6 @@ graph.add_edge("searchapi_search", "extract_plant_data")
 graph.add_edge("extract_plant_data", END)
 
 final_graph = graph.compile()
-
-initial_state = {
-    "query": f"For the plant {plant_name}, find its common names, locations, pests/diseases, best fertilizers/pesticides, planting & care tips, seed/fertilizer/pesticide links (Amazon), and appearance details: trunk/branch height, width, splits, angles, stem/leaf color, leaf shape, margin, vein, spacing, taper, alternate or not.",
-    }
-
 
 channel.basic_consume(queue='create_new_plant', on_message_callback=callback)
 print("Waiting for messages...")
