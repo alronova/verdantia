@@ -42,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     // final AuthState authState = context.watch<AuthCubit>().state;
-    final AuthCubit authCubit = context.read<AuthCubit>();
+    // final AuthCubit authCubit = context.read<AuthCubit>();
 
     return Scaffold(
       body: Stack(

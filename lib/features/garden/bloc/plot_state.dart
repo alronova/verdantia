@@ -4,12 +4,20 @@ class PlotState extends Equatable {
   final Plot plot;
   final bool isWatered;
 
-  const PlotState({required this.plot, this.isWatered = false});
+  const PlotState({
+    required this.plot,
+    this.isWatered = false,
+  });
 
-  PlotState copyWith({Plot? plot, bool? isWatered}) => PlotState(
-        plot: plot ?? this.plot,
-        isWatered: isWatered ?? this.isWatered,
-      );
+  PlotState copyWith({
+    Plot? plot,
+    bool? isWatered,
+  }) {
+    return PlotState(
+      plot: plot ?? this.plot,
+      isWatered: isWatered ?? this.isWatered,
+    );
+  }
 
   @override
   List<Object?> get props => [plot, isWatered];

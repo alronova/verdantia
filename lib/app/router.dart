@@ -1,7 +1,11 @@
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:verdantia/app/app.dart';
+import 'package:verdantia/core/utils/garden_utils.dart';
+import 'package:verdantia/features/botanica/botanica_screen.dart';
+import 'package:verdantia/features/garden/view/plant_action_screen.dart';
+import 'package:verdantia/features/garden/view/view_action_screen.dart';
 import 'package:verdantia/features/onboarding/onboarding_screen.dart';
 // pages
 import '../landing_page.dart';
@@ -51,12 +55,30 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const GardenScreen(),
     ),
     GoRoute(
+      path: '/botanica',
+      builder: (context, state) => const BotanicaScreen(),
+    ),
+    GoRoute(
       path: '/chat',
       builder: (context, state) => const ChatScreen(),
     ),
     GoRoute(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/plant-action/:action',
+      builder: (context, state) {
+        final actionStr = state.pathParameters['action']!;
+        final action = PlantAction.values.firstWhere(
+          (a) => a.name == actionStr,
+        );
+        return PlantActionScreen(action: action);
+      },
+    ),
+    GoRoute(
+      path: '/view-action',
+      builder: (context, state) => const ViewActionScreen(),
     ),
   ],
 );

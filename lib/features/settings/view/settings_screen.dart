@@ -30,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (userId == null) return;
 
     final doc =
-        await FirebaseFirestore.instance.collection('userdb').doc(userId).get();
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
     setState(() {
       username = doc.data()?['username'];
@@ -71,7 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final newUsername = _controller.text.trim();
               if (newUsername.isNotEmpty && userId != null) {
                 await FirebaseFirestore.instance
-                    .collection('userdb')
+                    .collection('users')
                     .doc(userId)
                     .update({'username': newUsername});
                 setState(() => username = newUsername);

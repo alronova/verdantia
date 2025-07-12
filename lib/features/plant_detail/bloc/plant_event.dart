@@ -1,29 +1,24 @@
-part of 'plant_bloc.dart';
+part of './plant_bloc.dart';
 
-abstract class PlantEvent extends Equatable {
-  const PlantEvent();
-  @override
-  List<Object?> get props => [];
-}
+abstract class PlantEvent {}
 
-class LoadPlant extends PlantEvent {
+class UpdatePlantAge extends PlantEvent {
   final String plantId;
+  final int newAge;
 
-  const LoadPlant(this.plantId);
-
-  @override
-  List<Object?> get props => [plantId];
+  UpdatePlantAge(this.plantId, this.newAge);
 }
 
-class UpdatePlant extends PlantEvent {
-  final Plant updatedPlant;
+class UpdatePlantDisease extends PlantEvent {
+  final String plantId;
+  final String disease;
+  final int intensity;
 
-  const UpdatePlant(this.updatedPlant);
-
-  @override
-  List<Object?> get props => [updatedPlant];
+  UpdatePlantDisease(this.plantId, this.disease, this.intensity);
 }
 
-class WaterPlant extends PlantEvent {}
+class FetchUserPlants extends PlantEvent {
+  final String userId;
 
-class GiveSunlight extends PlantEvent {}
+  FetchUserPlants(this.userId);
+}

@@ -20,3 +20,26 @@ actionButton(String text, VoidCallback onTap) => ElevatedButton.icon(
 
 TextStyle pixelStyle =
     GoogleFonts.pixelifySans(fontSize: 15, color: Colors.black);
+
+Widget newContainer({required Widget child, double padding = 8}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: const Color.fromARGB(255, 238, 236, 208),
+      borderRadius: BorderRadius.circular(padding),
+      border: Border.all(color: Colors.black, width: 2),
+    ),
+    child: child,
+  );
+}
+
+Widget infoBox({required String text, required String info}) {
+  return newContainer(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[Text(text), Text(info)],
+      ),
+    ),
+  );
+}

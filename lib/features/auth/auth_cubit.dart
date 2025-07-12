@@ -44,7 +44,7 @@ class AuthCubit extends Cubit<AuthState> {
       context.read<UserCubit>().loadUser();
       checkAndNavigateAfterLogin(context);
 
-      return null; // success
+      return null;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
         return 'No user found for this email.';
@@ -72,13 +72,13 @@ class AuthCubit extends Cubit<AuthState> {
         password: password,
       );
 
-      await initializeGardenIfNeeded();
+      await initializeGardenIfNeeded(username: username, email: email);
 
       if (!context.mounted) return null;
       context.read<UserCubit>().loadUser();
       checkAndNavigateAfterLogin(context);
 
-      return null; // success
+      return null;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         return 'The password provided is too weak.';
@@ -90,35 +90,48 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  Future<void> initializeGardenIfNeeded() async {
+  /// Initializes the Firestore user document if it doesn't exist
+  Future<void> initializeGardenIfNeeded({
+    String? username,
+    String? email,
+  }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final userDoc = FirebaseFirestore.instance.collection('userdb').doc(uid);
-    final doc = await userDoc.get();
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
+    final plotDoc = FirebaseFirestore.instance.collection('plots').doc(uid);
 
-    final hasPlots =
-        doc.data()?['plot'] != null && (doc.data()?['plot'] as List).isNotEmpty;
+    final userSnap = await userDoc.get();
+    final plotSnap = await plotDoc.get();
 
-    if (!hasPlots) {
-      final defaultPlots = List.generate(16, (i) {
-        return {
-          'index': i,
-          'unlocked': i == 0, // Only first one unlocked
-          'plantid': '',
-          'lastWatered': Timestamp.now(),
-        };
-      });
-
+    // Create user profile if missing
+    if (!userSnap.exists) {
       await userDoc.set({
-        'uid': uid,
-        'email': FirebaseAuth.instance.currentUser?.email ?? '',
-        'username': '',
+        'email': email ?? '',
+        'username': username ?? '',
         'xp': 0,
         'level': 0,
         'coins': 0,
-        'plot': defaultPlots,
-      }, SetOptions(merge: true));
+        'onboardingComplete': false,
+      });
+    }
+
+    // Create default 16 plots if not already there
+    if (!plotSnap.exists) {
+      final defaultPlots = List.generate(16, (i) {
+        return {
+          'index': i,
+          'unlocked': (i == 0) || (i == 1),
+          'plantId': '',
+          'lastWater': Timestamp.now(),
+          'lastSunlight': Timestamp.now(),
+          'lastFertilizer': Timestamp.now(),
+        };
+      });
+
+      await plotDoc.set({
+        'plots': defaultPlots,
+      });
     }
   }
 }

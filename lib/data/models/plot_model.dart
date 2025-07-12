@@ -4,50 +4,51 @@ class Plot {
   final int index;
   final bool unlocked;
   final String? plantId;
-  final DateTime? lastWatered;
+  final Timestamp? lastWater;
+  final Timestamp? lastSunlight;
+  final Timestamp? lastFertilizer;
 
   Plot({
     required this.index,
     required this.unlocked,
     this.plantId,
-    this.lastWatered,
+    this.lastWater,
+    this.lastSunlight,
+    this.lastFertilizer,
   });
 
   factory Plot.fromJson(Map<String, dynamic> json) => Plot(
         index: json['index'],
         unlocked: json['unlocked'],
-        plantId: json['plantid'],
-        lastWatered: json['lastwatered'] != null
-            ? (json['lastwatered'] as Timestamp).toDate()
-            : null,
+        plantId: json['plantId'],
+        lastWater: (json['lastWater'] as Timestamp?),
+        lastSunlight: (json['lastSunlight'] as Timestamp?),
+        lastFertilizer: (json['lastFertilizer'] as Timestamp?),
       );
 
   Map<String, dynamic> toJson() => {
         'index': index,
         'unlocked': unlocked,
-        'plantid': plantId,
-        'lastwatered':
-            lastWatered != null ? Timestamp.fromDate(lastWatered!) : null,
+        'plantId': plantId,
+        'lastWater': lastWater,
+        'lastSunlight': lastSunlight,
+        'lastFertilizer': lastFertilizer,
       };
 
   Plot copyWith({
     int? index,
     bool? unlocked,
     String? plantId,
-    DateTime? lastWatered,
+    Timestamp? lastWater,
+    Timestamp? lastSunlight,
+    Timestamp? lastFertilizer,
   }) =>
       Plot(
         index: index ?? this.index,
         unlocked: unlocked ?? this.unlocked,
         plantId: plantId ?? this.plantId,
-        lastWatered: lastWatered ?? this.lastWatered,
+        lastWater: lastWater ?? this.lastWater,
+        lastSunlight: lastSunlight ?? this.lastSunlight,
+        lastFertilizer: lastFertilizer ?? this.lastFertilizer,
       );
-
-  // bool get isWatered {
-  //   if (lastWatered == null) return false;
-  //   final now = DateTime.now();
-  //   return now.difference(lastWatered!).inHours < 12;
-  // }
 }
-
-// keep emitting PlotLoaded state with updated lastWatered

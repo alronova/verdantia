@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:verdantia/features/garden/view/plant_action_screen.dart';
 import 'package:verdantia/features/garden/view/view_action_screen.dart';
 
@@ -10,7 +11,7 @@ Future<void> initializeGardenIfNeeded() async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
   if (uid == null) return;
 
-  final userDoc = FirebaseFirestore.instance.collection('userdb').doc(uid);
+  final userDoc = FirebaseFirestore.instance.collection('users').doc(uid);
   final doc = await userDoc.get();
 
   final hasPlots =
@@ -150,34 +151,3 @@ Offset computeOffsetToCenter(List<Offset> positions, Size canvasSize) {
 //
 //
 enum PlantAction { water, sunlight, fertilize, view }
-
-void openPlantActionScreen(BuildContext context, PlantAction action) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => PlantActionScreen(action: action),
-    ),
-  );
-}
-
-void openViewActionScreen(BuildContext context) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => ViewActionScreen(),
-    ),
-  );
-}
-
-String getActionLabel(PlantAction action) {
-  switch (action) {
-    case PlantAction.water:
-      return "Water";
-    case PlantAction.sunlight:
-      return "Sunlight";
-    case PlantAction.fertilize:
-      return "Fertilize";
-    case PlantAction.view:
-      return "View";
-  }
-}

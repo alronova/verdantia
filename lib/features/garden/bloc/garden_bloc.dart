@@ -15,20 +15,26 @@ class GardenBloc extends Bloc<GardenEvent, GardenState> {
     on<UnlockPlot>(_onUnlockPlot);
   }
 
-  final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-  final userDoc = FirebaseFirestore.instance.collection('userdb');
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final CollectionReference plotCollection =
+      FirebaseFirestore.instance.collection('plots');
 
   Future<void> _onLoadGarden(
       LoadGarden event, Emitter<GardenState> emit) async {
     emit(GardenLoading());
 
     try {
-      final doc = await userDoc.doc(userId).get();
-      final data = doc.data();
-      if (data == null) throw Exception("User not found");
+      final doc = await plotCollection.doc(userId).get();
+      final data = doc.data() as Map<String, dynamic>?;
 
-      final plots =
-          (data['plot'] as List<dynamic>).map((e) => Plot.fromJson(e)).toList();
+      if (data == null || data['plots'] == null) {
+        throw Exception("No plots found for user.");
+      }
+
+      final plots = (data['plots'] as List<dynamic>)
+          .map((e) => Plot.fromJson(e))
+          .toList();
+
       emit(GardenLoaded(plots: plots));
     } catch (e) {
       emit(GardenError(message: e.toString()));
@@ -38,11 +44,10 @@ class GardenBloc extends Bloc<GardenEvent, GardenState> {
   Future<void> _onUpdatePlot(
       UpdatePlot event, Emitter<GardenState> emit) async {
     try {
-      final doc = await userDoc.doc(userId).get();
-      final data = doc.data();
-      if (data == null) throw Exception("User not found");
+      final doc = await plotCollection.doc(userId).get();
+      final data = doc.data() as Map<String, dynamic>?;
 
-      List<dynamic> plotList = List.from(data['plot'] ?? []);
+      List<dynamic> plotList = List.from(data?['plots'] ?? []);
       bool updated = false;
 
       for (int i = 0; i < plotList.length; i++) {
@@ -57,7 +62,7 @@ class GardenBloc extends Bloc<GardenEvent, GardenState> {
         plotList.add(event.plot.toJson());
       }
 
-      await userDoc.doc(userId).update({'plot': plotList});
+      await plotCollection.doc(userId).update({'plots': plotList});
       add(LoadGarden());
     } catch (e) {
       emit(GardenError(message: e.toString()));
@@ -68,10 +73,12 @@ class GardenBloc extends Bloc<GardenEvent, GardenState> {
       UnlockPlot event, Emitter<GardenState> emit) async {
     final currentState = state;
     if (currentState is GardenLoaded) {
-      final plot = currentState.plots.firstWhere((p) => p.index == event.index,
-          orElse: () => Plot(index: event.index, unlocked: false));
-      final updatedPlot =
-          Plot(index: plot.index, unlocked: true, plantId: plot.plantId);
+      final plot = currentState.plots.firstWhere(
+        (p) => p.index == event.index,
+        orElse: () => Plot(index: event.index, unlocked: false),
+      );
+
+      final updatedPlot = plot.copyWith(unlocked: true);
       add(UpdatePlot(updatedPlot));
     }
   }

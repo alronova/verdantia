@@ -1,10 +1,10 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:verdantia/core/utils/action_utils.dart';
 import 'package:verdantia/data/models/plot_model.dart';
 import 'package:verdantia/data/models/user_model.dart';
 import 'package:verdantia/features/garden/bloc/garden_bloc.dart';
-import 'package:verdantia/features/garden/bloc/plotgrid_cubit.dart';
 import 'package:verdantia/features/garden/widgets/coinxp_widget.dart';
 import 'package:verdantia/features/garden/widgets/misc_widgets.dart';
 import 'package:verdantia/features/onboarding/selected_plants_cubit.dart';
@@ -67,178 +67,177 @@ class _GardenScreenState extends State<GardenScreen>
   // ----------------------- WIDGETS --------------------------
   @override
   Widget build(BuildContext context) {
-    final selectedPlants = context.watch<SelectedPlantsCubit>().state;
-    // final screen = MediaQuery.of(context).size;
     // listens to gardenstate
-    return Stack(
-      children: [
-        // background
-        Positioned.fill(
-          child: Image.asset(
-            'assets/new/garden.png',
-            fit: BoxFit.cover,
+    if (plotFrames == null || canFrames == null) {
+      // Show loading indicator until assets are ready
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Scaffold(
+      body: Stack(
+        children: [
+          // background
+          Positioned.fill(
+            child: Image.asset(
+              'assets/new/garden.png',
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        BlocBuilder<UserCubit, AppUser?>(
-          builder: (context, user) {
-            if (user == null) return SizedBox();
+          BlocBuilder<UserCubit, AppUser?>(
+            builder: (context, user) {
+              if (user == null) return SizedBox();
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 30),
-              child: Column(
-                children: [
-                  // xp and coins bar
-                  HeaderBar(
-                    coins: user.coins,
-                    currentXp: user.xp,
-                    currentLevel: user.level,
-                  ),
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 30),
+                child: Column(
+                  children: [
+                    // xp and coins bar
+                    HeaderBar(
+                      coins: user.coins,
+                      currentXp: user.xp,
+                      currentLevel: user.level,
+                    ),
 
-                  //
-                  BlocListener<GardenBloc, GardenState>(
-                    listener: (context, state) {
-                      if (state is GardenLoaded) {
-                        context.read<PlotsCubit>().setPlots(state.plots);
-                      }
-                    },
-
-                    // garden plots
-                    child: BlocBuilder<PlotsCubit, List<Plot>>(
-                      builder: (context, plots) {
-                        if (plots.isEmpty || plotFrames == null) {
+                    //
+                    BlocBuilder<GardenBloc, GardenState>(
+                      builder: (context, state) {
+                        if (state is GardenLoading) {
                           return Center(child: CircularProgressIndicator());
-                        }
+                        } else if (state is GardenLoaded) {
+                          final plots = state.plots;
 
-                        final tileWidth = 70.0; // or the actual sprite width
-                        final tileHeight =
-                            28.0; // or half of height if isometric
+                          final tileWidth = 70.0;
+                          final tileHeight = 28.0;
 
-                        // isometric plot positions
-                        final plotPositions = <Offset>[];
-                        for (int row = 0; row < 4; row++) {
-                          for (int col = 0; col < 4; col++) {
-                            plotPositions.add(isoTilePosition(
-                                row, col, tileWidth, tileHeight));
+                          final plotPositions = <Offset>[];
+                          for (int row = 0; row < 4; row++) {
+                            for (int col = 0; col < 4; col++) {
+                              plotPositions.add(isoTilePosition(
+                                  row, col, tileWidth, tileHeight));
+                            }
                           }
-                        }
 
-                        final canvasSize = const Size(
-                            500, 400); // same as your CustomPaint size
-                        final offsetToCenter =
-                            computeOffsetToCenter(plotPositions, canvasSize);
-                        final offsetPlotPositions = plotPositions
-                            .map((p) => p + offsetToCenter)
-                            .toList();
+                          final canvasSize = const Size(500, 400);
+                          final offsetToCenter =
+                              computeOffsetToCenter(plotPositions, canvasSize);
+                          final offsetPlotPositions = plotPositions
+                              .map((p) => p + offsetToCenter)
+                              .toList();
 
-                        // gesture detector to find the index of the plot that was tapped
-                        return Column(
-                          children: [
-                            SizedBox(height: 20),
-                            Container(
-                              decoration: BoxDecoration(
-                                color:
-                                    const ui.Color.fromARGB(255, 238, 236, 208),
-                                borderRadius: BorderRadius.circular(20),
-                                border:
-                                    Border.all(color: Colors.black, width: 2),
-                              ),
-                              child: Center(
-                                child: CustomPaint(
-                                  painter: GardenPainter(
-                                    repaint: _controller,
-                                    plots: plots,
-                                    positions: offsetPlotPositions,
-                                    plotFrames: plotFrames!,
+                          // gesture detector to find the index of the plot that was tapped
+                          return Column(
+                            children: [
+                              SizedBox(height: 20),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const ui.Color.fromARGB(
+                                      255, 238, 236, 208),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border:
+                                      Border.all(color: Colors.black, width: 2),
+                                ),
+                                child: Center(
+                                  child: CustomPaint(
+                                    painter: GardenPainter(
+                                      repaint: _controller,
+                                      plots: plots,
+                                      positions: offsetPlotPositions,
+                                      plotFrames:
+                                          plotFrames!, // already loaded at startup
+                                    ),
+                                    size: Size(500, 400),
                                   ),
-                                  size: Size(500, 400),
                                 ),
                               ),
-                            ),
-                            SizedBox(height: 10),
-                            Container(
-                              decoration: BoxDecoration(
-                                color:
-                                    const ui.Color.fromARGB(255, 238, 236, 208),
-                                borderRadius: BorderRadius.circular(8),
-                                border:
-                                    Border.all(color: Colors.black, width: 2),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Total plants",
-                                      style: pixelStyle,
-                                    ),
-                                    Text(
-                                      "2",
-                                      style: pixelStyle,
-                                    ),
-                                  ],
+                              SizedBox(height: 10),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const ui.Color.fromARGB(
+                                      255, 238, 236, 208),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.black, width: 2),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Total plants",
+                                        style: pixelStyle,
+                                      ),
+                                      Text(
+                                        "2",
+                                        style: pixelStyle,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(height: 10),
-                            Container(
-                              decoration: BoxDecoration(
-                                color:
-                                    const ui.Color.fromARGB(255, 238, 236, 208),
-                                borderRadius: BorderRadius.circular(8),
-                                border:
-                                    Border.all(color: Colors.black, width: 2),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Garden Health",
-                                      style: pixelStyle,
-                                    ),
-                                    Text(
-                                      "100%",
-                                      style: pixelStyle,
-                                    ),
-                                  ],
+                              SizedBox(height: 10),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const ui.Color.fromARGB(
+                                      255, 238, 236, 208),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.black, width: 2),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Garden Health",
+                                        style: pixelStyle,
+                                      ),
+                                      Text(
+                                        "100%",
+                                        style: pixelStyle,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                actionButton(
-                                    "Water",
-                                    () => openPlantActionScreen(
-                                        context, PlantAction.water)),
-                                actionButton(
-                                    "Sun",
-                                    () => openPlantActionScreen(
-                                        context, PlantAction.sunlight)),
-                                actionButton(
-                                    "Fertilize",
-                                    () => openPlantActionScreen(
-                                        context, PlantAction.fertilize)),
-                                actionButton("View",
-                                    () => openViewActionScreen(context)),
-                              ],
-                            )
-                          ],
-                        );
+                              SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  actionButton(
+                                      "Water",
+                                      () => openPlantActionScreen(
+                                          context, PlantAction.water)),
+                                  actionButton(
+                                      "Sun",
+                                      () => openPlantActionScreen(
+                                          context, PlantAction.sunlight)),
+                                  actionButton(
+                                      "Fertilize",
+                                      () => openPlantActionScreen(
+                                          context, PlantAction.fertilize)),
+                                  actionButton("View",
+                                      () => openViewActionScreen(context)),
+                                ],
+                              )
+                            ],
+                          );
+                        } else {
+                          return const Text('Error loading garden');
+                        }
                       },
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -285,15 +284,25 @@ class GardenPainter extends CustomPainter {
     canvas.translate(offsetToCenter.dx, offsetToCenter.dy);
 
     // --- Draw plots ---
-    for (int i = 0; i < plots.length; i++) {
-      final plot = plots[i];
+    for (int i = 0; i < 16; i++) {
       final pos = positions[i];
 
-      int frameIndex = 0;
-      if (plot.lastWatered != null) {
-        final elapsed = now.difference(plot.lastWatered!).inSeconds;
-        final percent = (elapsed / (12 * 60 * 60)).clamp(0, 1.0);
-        frameIndex = ((1 - percent) * 18).floor();
+      // Get the plot at index i
+      final plot = plots.firstWhere(
+        (p) => p.index == i,
+        orElse: () => Plot(index: i, unlocked: false), // fallback = locked plot
+      );
+
+      int frameIndex = 0; // default to dry
+
+      if (plot.unlocked) {
+        if (plot.lastWater != null) {
+          final elapsed = now.difference((plot.lastWater!).toDate()).inSeconds;
+          final percent = (elapsed / (12 * 60 * 60)).clamp(0.0, 1.0);
+          frameIndex = ((1 - percent) * 18).floor(); // 0 (dry) to 18 (wet)
+        } else {
+          frameIndex = 0; // unlocked but never watered
+        }
       }
 
       final image = plotFrames[frameIndex];

@@ -1,5 +1,4 @@
 class AppUser {
-  final String uid;
   final String username;
   final int coins;
   final int xp;
@@ -7,7 +6,6 @@ class AppUser {
   final bool onboardingComplete;
 
   AppUser({
-    required this.uid,
     required this.username,
     required this.coins,
     required this.xp,
@@ -22,7 +20,6 @@ class AppUser {
       int? level,
       bool? onboardingComplete}) {
     return AppUser(
-      uid: uid,
       username: username ?? this.username,
       coins: coins ?? this.coins,
       xp: xp ?? this.xp,
@@ -32,7 +29,6 @@ class AppUser {
   }
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-        uid: json['uid'],
         username: json['username'],
         coins: json['coins'],
         xp: json['xp'],

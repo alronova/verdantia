@@ -1,11 +1,14 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:verdantia/core/services/image_gen_service.dart';
+import 'package:verdantia/core/services/plant_service.dart';
 import 'package:verdantia/features/onboarding/selected_plants_cubit.dart';
+import 'package:uuid/uuid.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -62,12 +65,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
   }
 
-  void _handleSubmit() {
+  void _handleSubmit() async {
     final selectedPlantNames =
         selectedIndexes.map((index) => plantNames[index]).toList();
 
-    context.read<SelectedPlantsCubit>().selectPlants(selectedPlantNames);
+    // context.read<SelectedPlantsCubit>().selectPlants(selectedPlantNames);
 
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+    final plantService = PlantService();
+    final uuid = Uuid();
+
+    for (int i = 0; i < selectedPlantNames.length; i++) {
+      final plantName = selectedPlantNames[i];
+
+      await plantService.createUserPlant(
+        userId: userId,
+        plantId: uuid.v4(), // <-- Unique plant instance ID
+        plantName: plantName,
+        age: 10,
+        hp: 5,
+        disease: "",
+        diseaseIntensity: 0,
+        plotIndex: i,
+      );
+    }
+    if (!mounted) return;
     context.go('/garden');
   }
 
